@@ -340,7 +340,7 @@ class TaskScheduler
                 mainFolder.DeleteFolder("\" subFolder.Name, 0)
         }
         if (includeFolder)
-            rootFolder := schd.GetFolder("\").DeleteFolder("\" this._mainFolderName, 0)
+            schd.GetFolder("\").DeleteFolder("\" this._mainFolderName, 0)
         schd := ""
         return n
     }
