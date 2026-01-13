@@ -302,7 +302,20 @@ class TaskScheduler
         schd := ""
         return true            
     }
-    _xmlEscape(s) {
+    _xmlEscape(s)    {
+        /*
+        https://www.w3.org/TR/xml/
+
+        Character Range
+        [2]   	Char	   ::=   	#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]	/ * any Unicode character, excluding the surrogate blocks, FFFE, and FFFF. * /
+        The mechanism for encoding character code points into bit patterns may vary from entity to entity. All XML processors MUST accept the UTF-8 and UTF-16 encodings of Unicode [Unicode]; the mechanisms for signaling which of the two is in use, or for bringing other encodings into play, are discussed later, in 4.3.3 Character Encoding in Entities.
+        */
+        s := regExReplace(s, "[\x00-\x08\x0B\x0C\x0E-\x1F]+")
+        s := regExReplace(s, "[\xD800-\xDBFF](?![\xDC00-\xDFFF])")  ;  lone high
+        s := regExReplace(s, "(?<![\xD800-\xDBFF])[\xDC00-\xDFFF]") ;  lone low
+        s := strReplace(s, chr(0xFFFE))
+        s := strReplace(s, chr(0xFFFF))
+
         s := strReplace(s, "&", "&amp;")
         s := strReplace(s, "<", "&lt;")
         s := strReplace(s, ">", "&gt;")
