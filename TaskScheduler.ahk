@@ -9,6 +9,8 @@
 ; Documentation / References:
 ;   ITaskFolder interface (taskschd.h)
 ;     https://learn.microsoft.com/en-us/windows/win32/api/taskschd/nn-taskschd-itaskfolder
+;   RunAsTask() - Auto-elevates script without UAC prompt
+;     https://www.autohotkey.com/boards/viewtopic.php?t=119710
 ;==============================================================
 
 /*
