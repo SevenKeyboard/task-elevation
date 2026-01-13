@@ -94,10 +94,3 @@ Change the root folder used in the Task Scheduler:
 - By default, scripts must be located under Program Files
   (this restriction can be disabled via parameters).
 - Designed for long-term installation and reuse rather than one-shot elevation.
-
----
-
-## License
-
-MIT License  
-© 2026 SevenKeyboard Ltd.
