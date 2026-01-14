@@ -139,14 +139,14 @@ If you use your own single-instance mechanism (mutex/lockfile/pipe/etc.),
 disable WM_COMMNOTIFY filtering:
 
 ```ahk
-TaskElevation.runAsAdmin("MyApp", , false, true)  ; allowCommNotifyMsgFlt=false (recommended in this case)
+TaskElevation.runAsAdmin("MyApp", , false)  ; allowCommNotifyMsgFlt=false (recommended in this case)
 ```
 
 Disabling the Program Files restriction is generally discouraged, but can be
 done for controlled environments:
 
 ```ahk
-TaskElevation.runAsAdmin("MyApp", , true, false)  ; requireProgramFiles=false (not recommended)
+TaskElevation.runAsAdmin("MyApp", , , false)  ; requireProgramFiles=false (not recommended)
 ; and for registration:
 ; TaskElevation.register("MyApp", , false)        ; requireProgramFiles=false (not recommended)
 ```
