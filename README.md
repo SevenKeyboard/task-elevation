@@ -40,7 +40,7 @@ The public API and behavior are intentionally kept consistent.
 
 ## Basic Usage
 
-Run the current script as administrator:
+Relaunch the current script as administrator:
 
 ```ahk
 TaskElevation.relaunchAsAdmin("MyApp")
