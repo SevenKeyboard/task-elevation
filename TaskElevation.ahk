@@ -15,23 +15,21 @@
 
 /*
 Example Usage:
-    TaskElevation.runAsAdmin("Your App Name")
-    tooltip % "A_IsAdmin: " A_IsAdmin "`nA_Args.Length: " A_Args.length()
-    
-    msgbox % TaskElevation.isRegistered("Your App Name")    ;  true or false
-    msgbox % TaskElevation.register("Your App Name")        ;  true
-    msgbox % TaskElevation.isRegistered("Your App Name")    ;  true
-    msgbox % TaskElevation.unregister("Your App Name")      ;  true
-    msgbox % TaskElevation.isRegistered("Your App Name")    ;  false
+    ;  1) Register once as admin
+    if (A_IsAdmin)    {
+        if (TaskElevation.register("MyApp"))
+            msgBox % "Registered."
+    }
 
-    F2::
-        if (A_IsAdmin)
-            msgbox % TaskElevation.register("Your App Name")
-        return
-    F3::
-        if (A_IsAdmin)
-            msgbox % TaskElevation.unregisterAll()
-        return
+    ;  2) Normal runs: relaunch via the scheduled task (if registered)
+    ;     Defaults:
+    ;       - requireProgramFiles=true  : recommended for distribution (only run from Program Files).
+    ;       - allowCommNotifyMsgFlt=true: enables WM_COMMNOTIFY handoff (e.g. #SingleInstance Force).
+    ;     Notes:
+    ;       - requireProgramFiles and allowCommNotifyMsgFlt are mutually exclusive in this design.
+    ;       - If you use a mutex/lockfile/etc. for single-instance control, prefer allowCommNotifyMsgFlt=false.
+    ;       - Disabling requireProgramFiles is generally not recommended.
+    TaskElevation.runAsAdmin("MyApp")
 */
 
 class VersionManager_TaskElevation
