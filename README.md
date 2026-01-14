@@ -43,7 +43,7 @@ The public API and behavior are intentionally kept consistent.
 Run the current script as administrator:
 
 ```ahk
-TaskElevation.runAsAdmin("MyApp")
+TaskElevation.relaunchAsAdmin("MyApp")
 ````
 
 If a scheduled task already exists, the current instance exits and the
@@ -116,12 +116,12 @@ behavior narrow, predictable, and repeatable.
 
 * `requireProgramFiles` (default: `true`)
 
-  * Affects: `runAsAdmin()`, `register()`
+  * Affects: `relaunchAsAdmin()`, `register()`
   * When enabled, these methods refuse to proceed unless `A_ScriptFullPath`
     is under Program Files (x86/x64).
 * `allowCommNotifyMsgFlt` (default: `true`)
 
-  * Affects: `runAsAdmin()` (admin-side only)
+  * Affects: `relaunchAsAdmin()` (admin-side only)
   * When enabled, the elevated instance relaxes the message filter to allow
     WM_COMMNOTIFY from a non-elevated instance. This is useful for patterns
     like `#SingleInstance Force` / instance handoff.
@@ -132,21 +132,21 @@ behavior narrow, predictable, and repeatable.
 Recommended default (distribution install + narrow surface):
 
 ```ahk
-TaskElevation.runAsAdmin("MyApp")  ; default behavior
+TaskElevation.relaunchAsAdmin("MyApp")  ; default behavior
 ```
 
 If you use your own single-instance mechanism (mutex/lockfile/pipe/etc.),
 disable WM_COMMNOTIFY filtering:
 
 ```ahk
-TaskElevation.runAsAdmin("MyApp", , false)  ; allowCommNotifyMsgFlt=false (recommended in this case)
+TaskElevation.relaunchAsAdmin("MyApp", , false)  ; allowCommNotifyMsgFlt=false (recommended in this case)
 ```
 
 Disabling the Program Files restriction is generally discouraged, but can be
 done for controlled environments:
 
 ```ahk
-TaskElevation.runAsAdmin("MyApp", , , false)  ; requireProgramFiles=false (not recommended)
+TaskElevation.relaunchAsAdmin("MyApp", , , false)  ; requireProgramFiles=false (not recommended)
 ; and for registration:
 ; TaskElevation.register("MyApp", , false)    ; requireProgramFiles=false (not recommended)
 ```
