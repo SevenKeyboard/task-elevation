@@ -148,7 +148,7 @@ done for controlled environments:
 ```ahk
 TaskElevation.runAsAdmin("MyApp", , , false)  ; requireProgramFiles=false (not recommended)
 ; and for registration:
-; TaskElevation.register("MyApp", , false)        ; requireProgramFiles=false (not recommended)
+; TaskElevation.register("MyApp", , false)    ; requireProgramFiles=false (not recommended)
 ```
 
 ---
