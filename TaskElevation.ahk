@@ -84,7 +84,7 @@ class TaskElevation
     }
     _isPathUnderProgramFiles(path)    {
         static FOLDERID_ProgramFilesX64 := "{6D809377-6AF0-444b-8957-A3773F02200E}"
-            ,FOLDERID_ProgramFilesX86 := "{7C5A40EF-A0FB-4BFC-874A-C0F2E0B9FA8E}"
+            ,FOLDERID_ProgramFilesX86   := "{7C5A40EF-A0FB-4BFC-874A-C0F2E0B9FA8E}"
         pfPaths := []
         pfPaths.push(this._getKnownFolderPath(FOLDERID_ProgramFilesX86))
         if (A_Is64bitOS && A_PtrSize == 8)
@@ -291,8 +291,8 @@ class TaskElevation
                         </Actions>
                     </Task>
                 )"
-                ,this._xmlEscape(A_IsCompiled ? """" A_ScriptFullpath """" : """" this._ahkPath """")
-                ,this._xmlEscape(A_IsCompiled ? """--byscheduler""" : """" A_ScriptFullpath """ ""--byscheduler""") 
+                ,this._xmlEscape(A_IsCompiled ? A_ScriptFullpath : this._ahkPath)
+                ,this._xmlEscape(A_IsCompiled ? "--byscheduler" : """" A_ScriptFullpath """ --byscheduler")
                 ,this._xmlEscape(A_WorkingDir))
             rootFolder.RegisterTask(taskPath
                 ,xml
@@ -312,11 +312,7 @@ class TaskElevation
         [2]   	Char	   ::=   	#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]	/ * any Unicode character, excluding the surrogate blocks, FFFE, and FFFF. * /
         The mechanism for encoding character code points into bit patterns may vary from entity to entity. All XML processors MUST accept the UTF-8 and UTF-16 encodings of Unicode [Unicode]; the mechanisms for signaling which of the two is in use, or for bringing other encodings into play, are discussed later, in 4.3.3 Character Encoding in Entities.
         */
-        s := regExReplace(s, "[\x00-\x08\x0B\x0C\x0E-\x1F]+")
-        s := regExReplace(s, "[\xD800-\xDBFF](?![\xDC00-\xDFFF])")  ;  lone high
-        s := regExReplace(s, "(?<![\xD800-\xDBFF])[\xDC00-\xDFFF]") ;  lone low
-        s := strReplace(s, chr(0xFFFE))
-        s := strReplace(s, chr(0xFFFF))
+        s := regExReplace(s, "[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]+")
 
         s := strReplace(s, "&", "&amp;")
         s := strReplace(s, "<", "&lt;")
