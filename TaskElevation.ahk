@@ -1,6 +1,6 @@
 ﻿#Requires AutoHotkey v1.1.37+
 ;==============================================================
-; TaskScheduler — Creates and runs elevated Scheduled Tasks for scripts, with task path sanitization and cleanup
+; TaskElevation — Creates and runs elevated Scheduled Tasks for scripts, with task path sanitization and cleanup
 ;
 ; GitHub: https://github.com/SevenKeyboard/task-scheduler
 ; Author: SevenKeyboard Ltd. (2026)
@@ -15,34 +15,34 @@
 
 /*
 Example Usage:
-    TaskScheduler.runAsAdmin("Your App Name")
+    TaskElevation.runAsAdmin("Your App Name")
     tooltip % "A_IsAdmin: " A_IsAdmin "`nA_Args.Length: " A_Args.length()
     
-    msgbox % TaskScheduler.isRegistered("Your App Name")    ;  true or false
-    msgbox % TaskScheduler.register("Your App Name")        ;  true
-    msgbox % TaskScheduler.isRegistered("Your App Name")    ;  true
-    msgbox % TaskScheduler.unregister("Your App Name")      ;  true
-    msgbox % TaskScheduler.isRegistered("Your App Name")    ;  false
+    msgbox % TaskElevation.isRegistered("Your App Name")    ;  true or false
+    msgbox % TaskElevation.register("Your App Name")        ;  true
+    msgbox % TaskElevation.isRegistered("Your App Name")    ;  true
+    msgbox % TaskElevation.unregister("Your App Name")      ;  true
+    msgbox % TaskElevation.isRegistered("Your App Name")    ;  false
 
     F2::
         if (A_IsAdmin)
-            msgbox % TaskScheduler.register("Your App Name")
+            msgbox % TaskElevation.register("Your App Name")
         return
     F3::
         if (A_IsAdmin)
-            msgbox % TaskScheduler.unregisterAll()
+            msgbox % TaskElevation.unregisterAll()
         return
 */
 
-class VersionManager_TaskScheduler
+class VersionManager_TaskElevation
 {
-    static _ := VersionManager_TaskScheduler._init()
+    static _ := VersionManager_TaskElevation._init()
     _init()    {
         global
-        TASKSCHEDULER_VERSION := "1.0.0"
+        TASKELEVATION_VERSION := "1.0.0"
     }
 }
-class TaskScheduler
+class TaskElevation
 {
     static _mainFolderName := "AutoHotkey.Tasks"
     MainFolderName    {
@@ -54,7 +54,7 @@ class TaskScheduler
             return this._mainFolderName
         }
     }
-    static _className := TaskScheduler._getClassName(A_ScriptHwnd)
+    static _className := TaskElevation._getClassName(A_ScriptHwnd)
     _getClassName(hWnd, nMaxCount := 1024)    { ;  MAX_CLASS_NAME
         varSetCapacity(lpClassName, (A_IsUnicode ? 2 : 1) * nMaxCount, 0)
         return (dllCall("User32.dll\GetClassName", "Ptr",hWnd, "Ptr",&lpClassName, "Int",nMaxCount, "Int"))
