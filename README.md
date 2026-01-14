@@ -1,6 +1,6 @@
-# TaskScheduler
+# TaskElevation
 
-TaskScheduler is a small AutoHotkey utility library for running scripts
+TaskElevation is a small AutoHotkey utility library for running scripts
 with elevated privileges using Windows Scheduled Tasks instead of UAC prompts.
 
 Both AutoHotkey v1 and v2 are supported, with separate implementations
@@ -41,7 +41,7 @@ The public API and behavior are intentionally kept consistent.
 
 Run the current script as administrator:
 
-    TaskScheduler.runAsAdmin("Your App Name")
+    TaskElevation.runAsAdmin("Your App Name")
 
 If a scheduled task already exists, the current instance exits and the
 script is relaunched with elevated privileges via the Task Scheduler.
@@ -52,19 +52,19 @@ script is relaunched with elevated privileges via the Task Scheduler.
 
 Check whether a task exists:
 
-    TaskScheduler.isRegistered("Your App Name")
+    TaskElevation.isRegistered("Your App Name")
 
 Register a task (requires admin rights):
 
-    TaskScheduler.register("Your App Name")
+    TaskElevation.register("Your App Name")
 
 Unregister a task:
 
-    TaskScheduler.unregister("Your App Name")
+    TaskElevation.unregister("Your App Name")
 
 Remove all registered tasks and folders:
 
-    TaskScheduler.unregisterAll()
+    TaskElevation.unregisterAll()
 
 ---
 
@@ -83,7 +83,7 @@ same script is launched with different parameters.
 
 Change the root folder used in the Task Scheduler:
 
-    TaskScheduler.MainFolderName := "MyCompany.Tasks"
+    TaskElevation.MainFolderName := "MyCompany.Tasks"
 
 ---
 
