@@ -29,7 +29,7 @@ Example Usage:
     ;       - requireProgramFiles and allowCommNotifyMsgFlt are mutually exclusive in this design.
     ;       - If you use a mutex/lockfile/etc. for single-instance control, prefer allowCommNotifyMsgFlt=false.
     ;       - Disabling requireProgramFiles is generally not recommended.
-    TaskElevation.runAsAdmin("MyApp")
+    TaskElevation.relaunchAsAdmin("MyApp")
 */
 
 class VersionManager_TaskElevation
@@ -99,7 +99,7 @@ class TaskElevation
         return b
     }
     ;--------------------------------------------------
-    runAsAdmin(subFolderName, taskPath := "", allowCommNotifyMsgFlt := true, requireProgramFiles := true)    {
+    relaunchAsAdmin(subFolderName, taskPath := "", allowCommNotifyMsgFlt := true, requireProgramFiles := true)    {
         static WM_COMMNOTIFY    := 0x0044
             ,MSGFLT_ALLOW       := 1
         if (requireProgramFiles)    {
