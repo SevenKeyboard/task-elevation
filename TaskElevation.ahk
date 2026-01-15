@@ -67,15 +67,15 @@ class TaskElevation
         }
     }
     static _getKnownFolderPath(knownFolderId, dwFlags := 0x00000000, hToken := 0)    {
-        static S_OK:=0
-        knownFolderPath:=""
+        static S_OK := 0
+        knownFolderPath := ""
         loop 1    {
-            GUID:=buffer(16,0)
-            if (dllCall("Ole32.dll\IIDFromString", "Str",knownFolderId, "Ptr",GUID.ptr, "Int")!==S_OK)
+            GUID := buffer(16, 0)
+            if (dllCall("Ole32.dll\IIDFromString", "Str",knownFolderId, "Ptr",GUID.ptr, "Int") !== S_OK)
                 break
-            if (dllCall("Shell32.dll\SHGetKnownFolderPath", "Ptr",GUID.ptr, "UInt",dwFlags, "Ptr",hToken, "Ptr*",&ppszPath:=0, "Int")!==S_OK)
+            if (dllCall("Shell32.dll\SHGetKnownFolderPath", "Ptr",GUID.ptr, "UInt",dwFlags, "Ptr",hToken, "Ptr*",&ppszPath:=0, "Int") !== S_OK)
                 break
-            knownFolderPath:=strGet(ppszPath,"UTF-16")
+            knownFolderPath := strGet(ppszPath, "UTF-16")
             dllCall("Ole32.dll\CoTaskMemFree", "Ptr",ppszPath)
         }
         return knownFolderPath
