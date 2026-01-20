@@ -235,7 +235,7 @@ class TaskElevation
         path := format(this._mainFolderName "\" subFolderName "\{1:}@{2:08X};user={3:08X}", fileName, pathCrc, userCrc)
         return (strLen(path) <= 238 ? path : "")
     }
-    _crc32Utf16Bytes(byRef data) {
+    _crc32Utf16Bytes(byRef data)    {
         return dllCall("ntdll.dll\RtlComputeCrc32"
             ,"UInt",0 ;  dwInitial
             ,"WStr",data ;  pData
