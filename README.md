@@ -183,13 +183,13 @@ Version 2.0.0 changes the task name format (adds `;user=<UserCRC>`).
 
 AutoHotkey forum discussion and support:
 
-* https://www.autohotkey.com/boards/viewtopic.php?t=XXXXXX
+* https://www.autohotkey.com/boards/viewtopic.php?t=140003
 
 ---
 
 ## Credits
 
-This project was inspired by, and references, SKAN’s RunAsTask example on the AutoHotkey forums:
+This project was inspired by, and references, SKAN's RunAsTask example on the AutoHotkey forums:
 
 * [https://www.autohotkey.com/boards/viewtopic.php?t=119710](https://www.autohotkey.com/boards/viewtopic.php?t=119710)
 
