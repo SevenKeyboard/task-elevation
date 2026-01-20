@@ -37,7 +37,7 @@ class VersionManager_TaskElevation
     static _ := this._init()
     static _init()    {
         global
-        TASKELEVATION_VERSION := "1.0.0"
+        TASKELEVATION_VERSION := "2.0.0"
     }
 }
 class TaskElevation
@@ -220,16 +220,27 @@ class TaskElevation
         subFolderName   := this._sanitizeTaskComponent(subFolderName)
         fileName        := A_ScriptName
         cmdLine := A_IsCompiled ? "`"" A_ScriptFullpath "`"" : "`"" this._ahkPath "`"" A_Space "`"" A_ScriptFullpath "`""
-        pathCrc := dllCall("ntdll.dll\RtlComputeCrc32", "Int",0, "WStr",cmdLine, "UInt",strPut(cmdLine, "UTF-16") - 2, "UInt")
-        path := format(this._mainFolderName "\" subFolderName "\{1:}@{2:08X}", fileName, pathCrc)
+        pathCrc := this._crc32Utf16Bytes(&cmdLine)
+        sid := this._ProcessUserSid
+        userCrc := (sid !== "") ? this._crc32Utf16Bytes(&sid) : 0
+        path := format(this._mainFolderName "\" subFolderName "\{1:}@{2:08X};user={3:08X}", fileName, pathCrc, userCrc)
         return (strLen(path) <= 238 ? path : "")
     }
     static getFileTaskPath(subFolderName, filePath, fileName)    {
         subFolderName   := this._sanitizeTaskComponent(subFolderName)
         fileName        := this._sanitizeTaskComponent(fileName)
-        pathCrc := dllCall("ntdll.dll\RtlComputeCrc32", "Int",0, "WStr",filePath, "UInt",strPut(filePath, "UTF-16") - 2, "UInt")
-        path := format(this._mainFolderName "\" subFolderName "\{1:}@{2:08X}", fileName, pathCrc)
+        pathCrc := this._crc32Utf16Bytes(&filePath)
+        sid := this._ProcessUserSid
+        userCrc := (sid !== "") ? this._crc32Utf16Bytes(&sid) : 0
+        path := format(this._mainFolderName "\" subFolderName "\{1:}@{2:08X};user={3:08X}", fileName, pathCrc, userCrc)
         return (strLen(path) <= 238 ? path : "")
+    }
+    static _crc32Utf16Bytes(&data) {
+        return dllCall("ntdll.dll\RtlComputeCrc32"
+            ,"UInt",0 ;  dwInitial
+            ,"WStr",data ;  pData
+            ,"UInt",strPut(data, "UTF-16") - 2 ;  iLen
+            ,"UInt")
     }
     ;--------------------------------------------------
     static _isTaskExist(subFolderName, taskPath, delete := false)    {
@@ -256,6 +267,9 @@ class TaskElevation
     static _registerTask(subFolderName, taskPath)    {
         static TASK_CREATE                  := 0x2
             ,TASK_LOGON_INTERACTIVE_TOKEN   := 3
+        sid := this._ProcessUserSid
+        if (sid == "")
+            return false
         schd := comObject("Schedule.Service")
         schd.Connect()
         rootFolder := schd.GetFolder("\")
@@ -265,9 +279,10 @@ class TaskElevation
             xml := format('
                 (LTrim
                     <?xml version="1.0" ?>
-                    <Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+                    <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
                         <Principals>
-                            <Principal>
+                            <Principal id="Author">
+                                <UserId>{1:}</UserId>
                                 <LogonType>InteractiveToken</LogonType>
                                 <RunLevel>HighestAvailable</RunLevel>
                             </Principal>
@@ -282,13 +297,14 @@ class TaskElevation
                         </Settings>
                         <Actions>
                             <Exec>
-                                <Command>{1:}</Command>
-                                <Arguments>{2:}</Arguments>
-                                <WorkingDirectory>{3:}</WorkingDirectory>
+                                <Command>{2:}</Command>
+                                <Arguments>{3:}</Arguments>
+                                <WorkingDirectory>{4:}</WorkingDirectory>
                             </Exec>
                         </Actions>
                     </Task>
                 )'
+                ,this._xmlEscape(sid)
                 ,this._xmlEscape(A_IsCompiled ? A_ScriptFullpath : this._ahkPath)
                 ,this._xmlEscape(A_IsCompiled ? "--byscheduler" : "`"" A_ScriptFullpath "`" --byscheduler")
                 ,this._xmlEscape(A_WorkingDir))
@@ -376,5 +392,56 @@ class TaskElevation
             }
         }
         return (out == "" ? defaultName : out)
+    }
+    ;--------------------------------------------------
+    static _ProcessUserSid    {
+        get  {
+            static sid := ""
+            if (sid == "")
+                sid := this._getProcessUserSid()
+            return sid
+        }
+    }
+    static _getProcessUserSid()    { ;  https://github.com/SevenKeyboard/get-process-user-sid/blob/main-ahkv2.0/getProcessUserSid.ahk
+        static TOKEN_QUERY  := 0x0008
+            ,TokenUser      := 1
+        if (!dllCall("Advapi32.dll\OpenProcessToken"
+                ,"Ptr",dllCall("Kernel32.dll\GetCurrentProcess", "Ptr") ;  -1
+                ,"UInt",TOKEN_QUERY
+                ,"Ptr*",&tokenHandle := 0
+                ,"Int"))    {
+            return ""
+        }
+        dllCall("Advapi32.dll\GetTokenInformation"
+            ,"Ptr",tokenHandle
+            ,"Int",TokenUser
+            ,"Ptr",0
+            ,"UInt",0
+            ,"UInt*",&tokenInformationLength := 0
+            ,"Int")
+        if (tokenInformationLength == 0)    {
+            if (tokenHandle)
+                dllCall("Kernel32.dll\CloseHandle", "Ptr",tokenHandle, "Int"), tokenHandle := 0
+            return ""
+        }
+        tokenInformation := buffer(tokenInformationLength, 0)
+        bResult := dllCall("Advapi32.dll\GetTokenInformation"
+            ,"Ptr",tokenHandle
+            ,"Int",TokenUser
+            ,"Ptr",tokenInformation.Ptr
+            ,"UInt",tokenInformationLength
+            ,"UInt*",&_ := 0
+            ,"Int")
+        if (tokenHandle)
+            dllCall("Kernel32.dll\CloseHandle", "Ptr",tokenHandle, "Int"), tokenHandle := 0
+        if (!bResult)
+            return ""
+        if (!pSid := numGet(tokenInformation, 0, "Ptr"))
+            return ""
+        if (!dllCall("Advapi32.dll\ConvertSidToStringSidW", "Ptr",pSid, "Ptr*",&pStringSid := 0, "Int"))
+            return ""
+        stringSid := strGet(pStringSid, "UTF-16")
+        dllCall("Kernel32.dll\LocalFree", "Ptr",pStringSid, "Ptr")
+        return stringSid
     }
 }
