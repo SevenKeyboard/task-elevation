@@ -23,8 +23,8 @@ Example Usage:
 
     ;  2) Normal runs: relaunch via the scheduled task (if registered)
     ;     Defaults:
-    ;       - requireProgramFiles=true  : recommended for distribution (only run from Program Files).
     ;       - allowCommNotifyMsgFlt=true: enables WM_COMMNOTIFY handoff (e.g. #SingleInstance Force).
+    ;       - requireProgramFiles=true  : recommended for distribution (only run from Program Files).
     ;     Notes:
     ;       - requireProgramFiles and allowCommNotifyMsgFlt are mutually exclusive in this design.
     ;       - If you use a mutex/lockfile/etc. for single-instance control, prefer allowCommNotifyMsgFlt=false.

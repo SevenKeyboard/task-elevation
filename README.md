@@ -18,7 +18,7 @@ following the same behavior and API design.
 * Optional restriction to scripts located under Program Files
 * Optional WM_COMMNOTIFY handoff (useful for `#SingleInstance Force`-style behavior)
 * Automatic cleanup of tasks and empty folders
-* **Binds scheduled tasks to the current interactive user to avoid Credential Manager (`CredWrite`) failures in scheduled-task elevation scenarios**
+* Binds scheduled tasks to the current interactive user to avoid issues in APIs that require an interactive logon session (e.g. Credential Manager)
 
 ---
 
@@ -156,7 +156,7 @@ done for controlled environments:
 ```ahk
 TaskElevation.relaunchAsAdmin("MyApp", , , false)  ; requireProgramFiles=false (not recommended)
 ; and for registration:
-; TaskElevation.register("MyApp", , false)    ; requireProgramFiles=false (not recommended)
+; TaskElevation.register("MyApp", , false)  ; requireProgramFiles=false (not recommended)
 ```
 
 ---
@@ -179,11 +179,18 @@ Version 2.0.0 changes the task name format (adds `;user=<UserCRC>`).
 
 ---
 
+## Forum Thread
+
+AutoHotkey forum discussion and support:
+
+* https://www.autohotkey.com/boards/viewtopic.php?t=XXXXXX
+
+---
+
 ## Credits
 
-This library is inspired by and builds upon ideas from community work,
-notably SKAN's **RunAsTask** example on the AutoHotkey forums:
+This project was inspired by, and references, SKAN’s RunAsTask example on the AutoHotkey forums:
 
 * [https://www.autohotkey.com/boards/viewtopic.php?t=119710](https://www.autohotkey.com/boards/viewtopic.php?t=119710)
 
-Thanks to SKAN and the AutoHotkey community for sharing knowledge and prior art.
+Thanks to SKAN and the AutoHotkey community for sharing their work and prior art.
