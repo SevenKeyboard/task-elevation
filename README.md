@@ -10,21 +10,22 @@ following the same behavior and API design.
 
 ## Features
 
-- Run scripts as administrator without repeated UAC prompts
-- Uses Windows Scheduled Tasks (no temporary helper executables)
-- Safe task path generation (invalid characters and reserved names handled)
-- Prevents duplicate task registration
-- Supports compiled and non-compiled scripts
-- Optional restriction to scripts located under Program Files
-- Optional WM_COMMNOTIFY handoff (useful for `#SingleInstance Force`-style behavior)
-- Automatic cleanup of tasks and empty folders
+* Run scripts as administrator without repeated UAC prompts
+* Uses Windows Scheduled Tasks (no temporary helper executables)
+* Safe task path generation (invalid characters and reserved names handled)
+* Prevents duplicate task registration
+* Supports compiled and non-compiled scripts
+* Optional restriction to scripts located under Program Files
+* Optional WM_COMMNOTIFY handoff (useful for `#SingleInstance Force`-style behavior)
+* Automatic cleanup of tasks and empty folders
+* **Binds scheduled tasks to the current interactive user to avoid Credential Manager (`CredWrite`) failures in scheduled-task elevation scenarios**
 
 ---
 
 ## Supported Versions
 
-- AutoHotkey v1.1+
-- AutoHotkey v2.0+
+* AutoHotkey v1.1+
+* AutoHotkey v2.0+
 
 Each version has its own source file.
 The public API and behavior are intentionally kept consistent.
@@ -33,8 +34,8 @@ The public API and behavior are intentionally kept consistent.
 
 ## Requirements
 
-- Windows
-- Administrator privileges for task registration and removal
+* Windows
+* Administrator privileges for task registration and removal
 
 ---
 
@@ -44,7 +45,7 @@ Relaunch the current script as administrator:
 
 ```ahk
 TaskElevation.relaunchAsAdmin("MyApp")
-````
+```
 
 If a scheduled task already exists, the current instance exits and the
 script is relaunched with elevated privileges via the Task Scheduler.
@@ -84,11 +85,16 @@ TaskElevation.unregisterAll()
 Tasks are created using the following structure:
 
 ```
-\AutoHotkey.Tasks\<SubFolder>\<ScriptName>@<CRC>
+\AutoHotkey.Tasks\<SubFolder>\<ScriptName>@<CRC>;user=<UserCRC>
 ```
 
-The CRC is derived from the command line to ensure uniqueness when the
-same script is launched with different parameters.
+* `<CRC>` is derived from the command line (or file path) to ensure uniqueness.
+* `<UserCRC>` is derived from the current process user SID to ensure tasks are
+  isolated per user and launched in the correct interactive user context.
+
+This avoids ambiguous execution contexts when elevating via Task Scheduler,
+which can break APIs that rely on an interactive logon session (e.g. Windows
+Credential Manager calls like `CredWrite`).
 
 ---
 
@@ -119,12 +125,14 @@ behavior narrow, predictable, and repeatable.
   * Affects: `relaunchAsAdmin()`, `register()`
   * When enabled, these methods refuse to proceed unless `A_ScriptFullPath`
     is under Program Files (x86/x64).
+
 * `allowCommNotifyMsgFlt` (default: `true`)
 
   * Affects: `relaunchAsAdmin()` (admin-side only)
   * When enabled, the elevated instance relaxes the message filter to allow
     WM_COMMNOTIFY from a non-elevated instance. This is useful for patterns
     like `#SingleInstance Force` / instance handoff.
+
 * These two are **mutually exclusive by design** in this library.
 
 ### When to change defaults (and how)
@@ -156,8 +164,18 @@ TaskElevation.relaunchAsAdmin("MyApp", , , false)  ; requireProgramFiles=false (
 ## Notes
 
 * Tasks run with the "HighestAvailable" run level.
+* Tasks are registered for the **current interactive user** (UserId/SID + InteractiveToken).
 * Command-line arguments are preserved when relaunching.
 * Designed for long-term installation and reuse rather than one-shot elevation.
+
+---
+
+## Compatibility
+
+### 2.0.0 breaking change
+
+Version 2.0.0 changes the task name format (adds `;user=<UserCRC>`).
+**Previously registered tasks must be re-registered** after upgrading.
 
 ---
 
