@@ -90,11 +90,19 @@ Tasks are created using the following structure:
 
 * `<CRC>` is derived from the command line (or file path) to ensure uniqueness.
 * `<UserCRC>` is derived from the current process user SID to ensure tasks are
-  isolated per user and launched in the correct interactive user context.
+  isolated per user and launched under the correct interactive user context.
 
-This avoids ambiguous execution contexts when elevating via Task Scheduler,
-which can break APIs that rely on an interactive logon session (e.g. Windows
-Credential Manager calls like `CredWrite`).
+Binding tasks to the current interactive user reduces ambiguous execution
+contexts when elevating via Task Scheduler, which can otherwise break APIs that
+depend on an interactive logon session (e.g. Windows Credential Manager calls
+like `CredWrite`).
+
+However, this cannot override limitations of the Windows logon/session model.
+In some scenarios (such as immediately after system boot), certain
+credential-related APIs may still fail (e.g. with
+`ERROR_NO_SUCH_LOGON_SESSION (1312)`) until an interactive logon/UAC context
+has been established. This behavior is a Windows constraint, not a
+TaskElevation bug.
 
 ---
 
