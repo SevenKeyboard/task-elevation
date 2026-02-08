@@ -37,7 +37,7 @@ class VersionManager_TaskElevation
     static _ := VersionManager_TaskElevation._init()
     _init()    {
         global
-        TASKELEVATION_VERSION := "2.0.0"
+        TASKELEVATION_VERSION := "2.0.1"
     }
 }
 class TaskElevation
@@ -91,7 +91,7 @@ class TaskElevation
         for _,pfPath in pfPaths    {
             if (pfPath == "")
                 continue
-            if (path ~= "i)^\Q" . rTrim(pfPath, "\") . "\E\\")    {
+            if (path ~= "i)^" . this._regExQuoteLiteral(rTrim(pfPath, "\")) . "\\")    {
                 b := true
                 break
             }
@@ -386,7 +386,7 @@ class TaskElevation
         if (regExMatch(out, "sDO)^(.*?)([ .]+)$", m))
             out := m[1] . strReplace(strReplace(m[2], " ", "%20"), ".", "%2E")
         for _,deviceName in reservedDeviceNames    {
-            if (out ~= "iD)^\Q" . deviceName . "\E(\.|$)")    {
+            if (out ~= "iD)^" . this._regExQuoteLiteral(deviceName) . "(\.|$)")    {
                 out := "_" . out
                 break
             }
@@ -443,5 +443,9 @@ class TaskElevation
         stringSid := strGet(pStringSid, "UTF-16")
         dllCall("Kernel32.dll\LocalFree", "Ptr",pStringSid, "Ptr")
         return stringSid
+    }
+    ;--------------------------------------------------
+    _regExQuoteLiteral(text)    {
+        return "\Q" . regExReplace(text, "\\E", "\E\\E\Q") . "\E"
     }
 }
