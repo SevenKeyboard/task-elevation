@@ -2,7 +2,7 @@
 ;==============================================================
 ; TaskElevation — Creates and runs elevated Scheduled Tasks for scripts, with task path sanitization and cleanup
 ;
-; GitHub: https://github.com/SevenKeyboard/task-scheduler
+; GitHub: https://github.com/SevenKeyboard/task-elevation
 ; Author: SevenKeyboard Ltd. (2026)
 ; License: MIT License
 ;
