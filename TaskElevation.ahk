@@ -37,7 +37,7 @@ class VersionManager_TaskElevation
     static _ := this._init()
     static _init()    {
         global
-        TASKELEVATION_VERSION := "2.0.1"
+        TASKELEVATION_VERSION := "2.1.0"
     }
 }
 class TaskElevation
@@ -52,6 +52,53 @@ class TaskElevation
             return this._mainFolderName
         }
     }
+    ;--------------------------------------------------
+    static _taskCommand := ""
+    static TaskCommand    {
+        get  {
+            return this._taskCommand
+        }
+        set  {
+            this._taskCommand := value
+            return this._taskCommand
+        }
+    }
+    static _taskArguments := ""
+    static TaskArguments    {
+        get  {
+            return this._taskArguments
+        }
+        set  {
+            this._taskArguments := value
+            return this._taskArguments
+        }
+    }
+    static _taskWorkingDir := ""
+    static TaskWorkingDir    {
+        get  {
+            return this._taskWorkingDir
+        }
+        set  {
+            this._taskWorkingDir := value
+            return this._taskWorkingDir
+        }
+    }
+    static _getTaskCommand()    {
+        return this._taskCommand !== ""
+            ? this._taskCommand
+            : (A_IsCompiled ? A_ScriptFullpath : this._ahkPath)
+    }
+    static _getTaskArguments()    {
+        return this._taskArguments !== ""
+            ? this._taskArguments
+            : (A_IsCompiled ? "--byscheduler" : "`"" A_ScriptFullpath "`" --byscheduler")
+    }
+    static _getTaskWorkingDir()    {
+        return this._taskWorkingDir !== ""
+            ? this._taskWorkingDir
+            : A_WorkingDir
+    }
+    ;--------------------------------------------------
     static _className := this._getClassName(A_ScriptHwnd)
     static _getClassName(hWnd, nMaxCount := 1024)    { ;  MAX_CLASS_NAME
         lpClassName := buffer(2 * nMaxCount, 0)
@@ -305,9 +352,9 @@ class TaskElevation
                     </Task>
                 )'
                 ,this._xmlEscape(sid)
-                ,this._xmlEscape(A_IsCompiled ? A_ScriptFullpath : this._ahkPath)
-                ,this._xmlEscape(A_IsCompiled ? "--byscheduler" : "`"" A_ScriptFullpath "`" --byscheduler")
-                ,this._xmlEscape(A_WorkingDir))
+                ,this._xmlEscape(this._getTaskCommand())
+                ,this._xmlEscape(this._getTaskArguments())
+                ,this._xmlEscape(this._getTaskWorkingDir()))
             rootFolder.RegisterTask(taskPath
                 ,xml
                 ,TASK_CREATE
