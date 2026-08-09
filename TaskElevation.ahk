@@ -37,7 +37,7 @@ class VersionManager_TaskElevation
     static _ := this._init()
     static _init()    {
         global
-        TASKELEVATION_VERSION := "2.1.0"
+        TASKELEVATION_VERSION := "2.1.1"
     }
 }
 class TaskElevation
@@ -320,8 +320,14 @@ class TaskElevation
         schd := comObject("Schedule.Service")
         schd.Connect()
         rootFolder := schd.GetFolder("\")
+        subFolderName := this._sanitizeTaskComponent(subFolderName)
+        taskFolderPath := "\" this._mainFolderName "\" subFolderName
+        try taskFolder := schd.GetFolder(taskFolderPath)
+        catch
+            taskFolder := rootFolder.CreateFolder(this._mainFolderName "\" subFolderName)
+        splitPath(taskPath, &taskName)
         exist := false
-        try task := rootFolder.GetTask(taskPath), exist := true
+        try task := taskFolder.GetTask(taskName), exist := true
         if (!exist)    {
             xml := format('
                 (LTrim
@@ -355,7 +361,7 @@ class TaskElevation
                 ,this._xmlEscape(this._getTaskCommand())
                 ,this._xmlEscape(this._getTaskArguments())
                 ,this._xmlEscape(this._getTaskWorkingDir()))
-            rootFolder.RegisterTask(taskPath
+            taskFolder.RegisterTask(taskName
                 ,xml
                 ,TASK_CREATE
                 ,""
