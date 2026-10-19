@@ -1,204 +1,169 @@
 # TaskElevation
 
-TaskElevation is a small AutoHotkey utility library for running scripts
-with elevated privileges using Windows Scheduled Tasks instead of repeated UAC prompts.
+Run an application with elevated privileges through Windows Task Scheduler,
+without repeated UAC prompts after initial registration.
 
-Both AutoHotkey v1 and v2 are supported, with separate implementations
-following the same behavior and API design.
-
----
+C# / NativeAOT · .NET 10 · Windows x64 · 3.0.0
 
 ## Features
 
-* Run scripts as administrator without repeated UAC prompts
-* Uses Windows Scheduled Tasks (no temporary helper executables)
-* Safe task path generation (invalid characters and reserved names handled)
-* Prevents duplicate task registration
-* Supports compiled and non-compiled scripts
-* Optional restriction to scripts located under Program Files
-* Optional WM_COMMNOTIFY handoff (useful for `#SingleInstance Force`-style behavior)
-* Automatic cleanup of tasks and empty folders
-* Binds scheduled tasks to the current interactive user to avoid issues in APIs that require an interactive logon session (e.g. Credential Manager)
-
----
-
-## Supported Versions
-
-* AutoHotkey v1.1+
-* AutoHotkey v2.0+
-
-Each version has its own source file.
-The public API and behavior are intentionally kept consistent.
-
----
+- Register, query, run and remove tasks for the current interactive user.
+- Preserve command-line arguments, including empty strings, quotes and Unicode.
+- Generate stable task names from the executable path and user SID.
+- Support apphost and NativeAOT executables through a small native DLL.
+- Remove empty task folders when unregistering.
 
 ## Requirements
 
-* Windows
-* Administrator privileges for task registration and removal
+- Windows x64 and a .NET 10 application.
+- An executable installed under Program Files or Program Files (x86).
+- Administrator privileges for registration and removal, under the same Windows
+  account that will run the application. The account must be able to obtain an
+  administrator token; registering under a different administrator account is
+  not a way to elevate a standard user's application.
 
----
+Use the application's `.exe`, either an apphost or a NativeAOT executable.
+Launching through `dotnet MyApp.dll` is unsupported.
+
+## Build and Reference
+
+The repository includes an **unsigned, prebuilt Release DLL** at
+`src/SevenKeyboard.TaskElevation/native/win-x64/TaskElevation.Native.dll`.
+It is tracked by Git alongside its C++ source. Normal C# builds use this DLL and
+require only the .NET 10 SDK:
+
+```powershell
+dotnet build src/SevenKeyboard.TaskElevation -c Release
+```
+
+Reference the project from your application, adjusting the relative path:
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="../task-elevation/src/SevenKeyboard.TaskElevation/SevenKeyboard.TaskElevation.csproj" />
+</ItemGroup>
+```
+
+Build and publish copy `TaskElevation.Native.dll` to the application's output
+directory. Deploy it beside the EXE. NativeAOT publishing still requires the
+native build tools required by .NET; the prebuilt DLL only removes the need to
+compile this library's C++ source during ordinary builds.
 
 ## Basic Usage
 
-Relaunch the current script as administrator:
+Register the installed application once from an elevated process (see below),
+then request elevation during normal startup:
 
-```ahk
-TaskElevation.relaunchAsAdmin("MyApp")
+```csharp
+using System;
+using SevenKeyboard;
+
+internal static class Program
+{
+    private static void Main(string[] args)
+    {
+        TaskElevation.MainFolderName = "MyCompany.Tasks";
+        TaskElevation.TaskWorkingDir = AppContext.BaseDirectory;
+        args = TaskElevation.RestoreArguments(args);
+
+        if (TaskElevation.RelaunchAsAdmin("MyApp", args))
+            return;
+
+        // Continue application startup using the restored args.
+    }
+}
 ```
 
-If a scheduled task already exists, the current instance exits and the
-script is relaunched with elevated privileges via the Task Scheduler.
+Call `RestoreArguments` before parsing application or profile arguments. It
+returns ordinary arguments unchanged and decodes arguments passed by the
+scheduled task. The transport marker is not proof of elevation or trusted input.
 
----
+`RelaunchAsAdmin` returns `true` when Task Scheduler accepts the request. It does
+not wait for the child to initialize or exit the current process for you.
+It returns `false` when already elevated, outside Program Files, or when no
+compatible task exists. Decide how your application should continue in those cases.
 
 ## Task Management
 
-Check whether a task exists:
+Use the same configuration and subfolder name for all operations:
 
-```ahk
-TaskElevation.isRegistered("MyApp")
+```csharp
+bool registered = TaskElevation.Register("MyApp");       // Requires administrator.
+bool available = TaskElevation.IsRegistered("MyApp");
+bool removed = TaskElevation.Unregister("MyApp");        // Requires administrator.
 ```
 
-Register a task (requires admin rights):
+`Register` creates or updates the task belonging to this executable and user.
+A conflicting definition belonging to another target is not overwritten.
+`IsRegistered` checks the target, user, argument protocol and required settings.
+`Unregister` deletes the matching task and tries to remove its empty folders.
 
-```ahk
-TaskElevation.register("MyApp")
+Missing or incompatible tasks normally return `false`; invalid arguments and
+native failures throw exceptions. Registration and removal also return `false`
+without administrator privileges. Task Scheduler entries are persistent:
+remove them during uninstall. Users who manually change task conditions are
+responsible for those conditions.
+
+## Configuration and Task Paths
+
+Set configuration once at startup, before calling the scheduler:
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `MainFolderName` | `"SevenKeyboard.Tasks"` | Root folder in Task Scheduler. |
+| `TaskCommand` | `Environment.ProcessPath` | Executable to register and run. |
+| `TaskWorkingDir` | `Environment.CurrentDirectory` | Child process working directory. |
+
+Paths must be fully qualified and must not contain `%`, because Task Scheduler
+expands environment variables. Literal `$` characters in the working directory
+are handled by the library. Keep the installation protected from ordinary-user
+writes; the Program Files path check does not inspect directory permissions.
+
+Generated task paths have this structure:
+
+```text
+\SevenKeyboard.Tasks\<SubFolder>\<FileName>@<PathHash>;user=<UserHash>
 ```
 
-Unregister a task:
+Each identifier is the first 128 bits of SHA-256, shown as 32 uppercase hex
+digits. The path identifier uses the exact executable path; the user identifier
+uses the current user SID. Invalid name characters and reserved device names
+are escaped. Task paths are limited to 238 characters.
 
-```ahk
-TaskElevation.unregister("MyApp")
+`GetFileTaskPath(subFolderName, filePath, fileName)` returns a generated path.
+The scheduler methods also accept an optional `taskPath` for separate entries,
+such as application profiles. It must remain in the configured main/subfolder
+and retain the current user's suffix. Use the same path for registration,
+query, relaunch and removal.
+
+Tasks use `HighestAvailable` and `InteractiveToken`, with parallel instances
+allowed. Registration and use must refer to the same interactively logged-on
+user; this library does not manage single-instance handoff.
+
+## Rebuilding the Native DLL
+
+To build from C++ source instead of using the included DLL, install Visual
+Studio 2026 C++ tools (MSVC v145, ATL and Windows SDK), then run:
+
+```powershell
+dotnet build src/SevenKeyboard.TaskElevation -c Release -p:TaskElevationBuildNative=true
 ```
 
-Remove all registered tasks and folders:
+This builds incrementally into `native/bin/Release` and uses that output for
+this build. It does not replace the DLL tracked by Git.
 
-```ahk
-TaskElevation.unregisterAll()
+After changing C++ source, refresh the included binary explicitly from the
+repository root:
+
+```powershell
+$native = 'src/SevenKeyboard.TaskElevation/native'
+& "$native/build.cmd" Release Rebuild
+if ($LASTEXITCODE -ne 0) { throw 'Native build failed.' }
+Copy-Item "$native/bin/Release/TaskElevation.Native.dll" "$native/win-x64/TaskElevation.Native.dll"
 ```
 
----
+Commit the matching C++ source and prebuilt DLL together. Builds do not sign
+binaries automatically. Keep the repository's included DLL unsigned; sign the
+EXE and DLL in your application's release output if required by your deployment.
 
-## Task Path Format
-
-Tasks are created using the following structure:
-
-```
-\AutoHotkey.Tasks\<SubFolder>\<ScriptName>@<CRC>;user=<UserCRC>
-```
-
-* `<CRC>` is derived from the command line (or file path) to ensure uniqueness.
-* `<UserCRC>` is derived from the current process user SID to ensure tasks are
-  isolated per user and launched under the correct interactive user context.
-
-Binding tasks to the current interactive user reduces ambiguous execution
-contexts when elevating via Task Scheduler, which can otherwise break APIs that
-depend on an interactive logon session (e.g. Windows Credential Manager calls
-like `CredWrite`).
-
-However, this cannot override limitations of the Windows logon/session model.
-In some scenarios (such as immediately after system boot), certain
-credential-related APIs may still fail (e.g. with
-`ERROR_NO_SUCH_LOGON_SESSION (1312)`) until an interactive logon/UAC context
-has been established. This behavior is a Windows constraint, not a
-TaskElevation bug.
-
----
-
-## Customization
-
-Change the root folder used in the Task Scheduler:
-
-```ahk
-TaskElevation.MainFolderName := "MyCompany.Tasks"
-```
-
----
-
-## Design Notes
-
-### Why the defaults are conservative
-
-Task Scheduler entries are persistent. If elevation can be triggered from
-arbitrary locations, the “elevation surface” becomes wider and easier to
-misuse. For that reason, the default behavior assumes a **distribution-style
-installation** (e.g. under Program Files) and tries to keep elevation
-behavior narrow, predictable, and repeatable.
-
-### What the options affect
-
-* `requireProgramFiles` (default: `true`)
-
-  * Affects: `relaunchAsAdmin()`, `register()`
-  * When enabled, these methods refuse to proceed unless `A_ScriptFullPath`
-    is under Program Files (x86/x64).
-
-* `allowCommNotifyMsgFlt` (default: `true`)
-
-  * Affects: `relaunchAsAdmin()` (admin-side only)
-  * When enabled, the elevated instance relaxes the message filter to allow
-    WM_COMMNOTIFY from a non-elevated instance. This is useful for patterns
-    like `#SingleInstance Force` / instance handoff.
-
-* These two are **mutually exclusive by design** in this library.
-
-### When to change defaults (and how)
-
-Recommended default (distribution install + narrow surface):
-
-```ahk
-TaskElevation.relaunchAsAdmin("MyApp")  ; default behavior
-```
-
-If you use your own single-instance mechanism (mutex/lockfile/pipe/etc.),
-disable WM_COMMNOTIFY filtering:
-
-```ahk
-TaskElevation.relaunchAsAdmin("MyApp", , false)  ; allowCommNotifyMsgFlt=false (recommended in this case)
-```
-
-Disabling the Program Files restriction is generally discouraged, but can be
-done for controlled environments:
-
-```ahk
-TaskElevation.relaunchAsAdmin("MyApp", , , false)  ; requireProgramFiles=false (not recommended)
-; and for registration:
-; TaskElevation.register("MyApp", , false)  ; requireProgramFiles=false (not recommended)
-```
-
----
-
-## Notes
-
-* Tasks run with the "HighestAvailable" run level.
-* Tasks are registered for the **current interactive user** (UserId/SID + InteractiveToken).
-* Command-line arguments are preserved when relaunching.
-* Designed for long-term installation and reuse rather than one-shot elevation.
-
----
-
-## Compatibility
-
-### 2.0.0 breaking change
-
-Version 2.0.0 changes the task name format (adds `;user=<UserCRC>`).
-**Previously registered tasks must be re-registered** after upgrading.
-
----
-
-## Forum Thread
-
-AutoHotkey forum discussion and support:
-
-* https://www.autohotkey.com/boards/viewtopic.php?t=140003
-
----
-
-## Credits
-
-This project was inspired by, and references, SKAN's RunAsTask example on the AutoHotkey forums:
-
-* [https://www.autohotkey.com/boards/viewtopic.php?t=119710](https://www.autohotkey.com/boards/viewtopic.php?t=119710)
-
-Thanks to SKAN and the AutoHotkey community for sharing their work and prior art.
+[Tests](tests/TaskElevation.Tests/README.md) · [MIT License](LICENSE)
