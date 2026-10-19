@@ -37,7 +37,7 @@ class VersionManager_TaskElevation
     static _ := this._init()
     static _init()    {
         global
-        TASKELEVATION_VERSION := "2.1.1"
+        TASKELEVATION_VERSION := "2.1.2"
     }
 }
 class TaskElevation
@@ -89,9 +89,10 @@ class TaskElevation
             : (A_IsCompiled ? A_ScriptFullpath : this._ahkPath)
     }
     static _getTaskArguments()    {
+        ;  Escape the literal script path; custom TaskArguments retain scheduler variables.
         return this._taskArguments !== ""
             ? this._taskArguments
-            : (A_IsCompiled ? "--byscheduler" : "`"" A_ScriptFullpath "`" --byscheduler")
+            : (A_IsCompiled ? "--byscheduler" : "`"" strReplace(A_ScriptFullpath, "$", "$$") "`" --byscheduler")
     }
     static _getTaskWorkingDir()    {
         return this._taskWorkingDir !== ""
@@ -138,7 +139,7 @@ class TaskElevation
         for pfPath in pfPaths    {
             if (pfPath == "")
                 continue
-            if (path ~= "i)^" . this._regExQuoteLiteral(rTrim(pfPath, "\")) . "\\")    {
+            if (path ~= "i)\A" . this._regExQuoteLiteral(rTrim(pfPath, "\")) . "\\")    {
                 b := true
                 break
             }
@@ -265,7 +266,7 @@ class TaskElevation
     }
     static getScriptTaskPath(subFolderName)    {
         subFolderName   := this._sanitizeTaskComponent(subFolderName)
-        fileName        := A_ScriptName
+        fileName        := this._sanitizeTaskComponent(A_ScriptName)
         cmdLine := A_IsCompiled ? "`"" A_ScriptFullpath "`"" : "`"" this._ahkPath "`"" A_Space "`"" A_ScriptFullpath "`""
         pathCrc := this._crc32Utf16Bytes(&cmdLine)
         sid := this._ProcessUserSid
@@ -360,7 +361,7 @@ class TaskElevation
                 ,this._xmlEscape(sid)
                 ,this._xmlEscape(this._getTaskCommand())
                 ,this._xmlEscape(this._getTaskArguments())
-                ,this._xmlEscape(this._getTaskWorkingDir()))
+                ,this._xmlEscape(strReplace(this._getTaskWorkingDir(), "$", "$$")))
             taskFolder.RegisterTask(taskName
                 ,xml
                 ,TASK_CREATE
@@ -436,10 +437,12 @@ class TaskElevation
             }
             out .= ch
         }
-        if (regExMatch(out, "sD)^(.*?)([ .]+)$", &m))
+        if (regExMatch(out, "s)\A(.*?)([ .]+)\z", &m))
             out := m[1] . strReplace(strReplace(m[2], " ", "%20"), ".", "%2E")
+        if (regExMatch(out, "s)\A( +)(.*)\z", &m))
+            out := strReplace(m[1], " ", "%20") . m[2]
         for deviceName in reservedDeviceNames    {
-            if (out ~= "iD)^" . this._regExQuoteLiteral(deviceName) . "(\.|$)")    {
+            if (out ~= "i)\A" . this._regExQuoteLiteral(deviceName) . "(\.|\z)")    {
                 out := "_" . out
                 break
             }
